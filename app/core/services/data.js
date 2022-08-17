@@ -1,5 +1,5 @@
 const httpAdapter = require('../../infra/http');
-const { TOKEN } = require('../../help/constants/github-api');
+const { TOKEN } = require('../../../personal-data');
 
 
 class DataService {
@@ -12,9 +12,9 @@ class DataService {
             newPage = await this._getOnePage(apiUrl, pageNumber);
             allPages = allPages.concat(newPage);
             pageNumber++;
-        } while (newPage.length > 0);
+        } while (newPage.length === 100);
 
-        return allPages;
+        return Promise.all(allPages);
     }
 
     async _getOnePage (apiUrl, pageNumber) {
