@@ -1,27 +1,40 @@
 const dataService = require('./data');
+const pullService = require('./pull');
+
 
 class RepositoryService {
     async get(organization) {
-        const apiUrl = `https://api.github.com/orgs/${organization}/repos`
-        const repositoriesData = await dataService.getData(apiUrl);
-        const repositoryList = this._serializeData(repositoriesData);
+        try {
+            const apiUrl = `https://api.github.com/orgs/${organization}/repos`
+            const rawRepositoriesData = await dataService.getData(apiUrl);
+            const serializedData = await this._serializeData(organization, rawRepositoriesData);
+            const repositoryList = this._filterRepositoriesWithPull(serializedData);
 
-        return repositoryList;
+            return repositoryList;
+        } catch (error) {
+            console.log('repository.Get CATCH!!!', error);
+        }
     }
 
-    _serializeData(repositoriesData) {
-        let seq = 0;
-        const repositoryList = repositoriesData
-            .map((repository) => {
-                seq++;
+    _serializeData(organization, repositoriesData) {
+        const serializedData =  repositoriesData
+            .map(async (repository) => {
+                const pullRequests = await pullService.getPullRequestsOfARepository(organization, repository.name);
                 return {
-                    seq: seq,
                     id: repository.id,
-                    name: repository.name
+                    name: repository.name,
+                    pullRequests
                 };
-            });
 
-        return repositoryList;
+            });
+        return Promise.all(serializedData);
+    }
+
+    _filterRepositoriesWithPull(repositoriesData) {
+        const filteredList = repositoriesData
+            .filter(repository => repository.pullRequests.length > 0);
+
+        return filteredList;
     }
 }
 
